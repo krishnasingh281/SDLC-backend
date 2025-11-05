@@ -1,0 +1,22 @@
+# Python virtual environment
+# This contains all the installed packages
+venv/
+
+# Secret environment variables
+# This file contains your API key
+.env
+
+# Local database file
+# We don't want to commit our test data
+*.db
+*.sqlite3
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# VSCode settings (good practice)
+.vscode/
+
+# macOS files (good practice)
+.DS_Store
