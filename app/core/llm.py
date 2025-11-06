@@ -4,7 +4,8 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from app.core.schemas import (
     TradeoffRequest, TradeoffResponse,
     ReviewRequest, ReviewResponse,
-    RiskRequest, RiskResponse, RiskRow
+    RiskRequest, RiskResponse, RiskRow,
+    TestCaseRequest, TestCaseResponse, TestCase,
 )
 
 def _extract_json(text: str) -> str:
@@ -43,13 +44,23 @@ def _gemini(messages: list[str]) -> str:
         }
         return json.dumps(body)
     else:
+        count = int(u.get("count", 6))
+        cases = []
+        for i in range(count):
+            cases.append({
+                "id": f"TC-{i+1:03}",
+                "title": f"Sample case {i+1}",
+                "given": "A valid user in the system",
+                "when": "They perform the primary action",
+                "then": "The expected outcome occurs",
+                "priority": "Medium",
+                "type": "Positive",
+                "data": {}
+            })
         body = {
-            "version":"1.0",
-            "summary":"Stub review summary",
-            "risks":[
-                {"area":"Architecture","severity":"High","likelihood":"Medium","impact":"Latency risk","mitigation":"Add cache"}
-            ],
-            "action_items":["Add metrics","Define SLAs"]
+            "version": "1.0",
+            "summary": "Stub test cases generated",
+            "cases": cases
         }
         return json.dumps(body)
 
@@ -92,3 +103,26 @@ def run_risk(req: RiskRequest) -> RiskResponse:
     data["trace_id"] = trace_id
     data["generated_at"] = _now()
     return RiskResponse(**data)
+
+@retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
+def run_testcases(req: TestCaseRequest) -> TestCaseResponse:
+    trace_id = str(uuid.uuid4())
+    schema_hint = TestCaseResponse.model_json_schema()
+    system = (
+        "You are a senior QA engineer. "
+        "Generate high-quality BDD-style test cases (Given/When/Then). "
+        f"Output VALID JSON ONLY matching this schema: {schema_hint}"
+    )
+    user = req.model_dump_json()
+
+    data = json.loads(_extract_json(_gemini([system, user])))
+
+    # ensure IDs and types look sane
+    for i, c in enumerate(data.get("cases", []), start=1):
+        c.setdefault("id", f"TC-{i:03}")
+        c.setdefault("priority", "Medium")
+        c.setdefault("type", "Positive")
+
+    data["trace_id"] = trace_id
+    data["generated_at"] = _now()
+    return TestCaseResponse(**data)

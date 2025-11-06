@@ -3,6 +3,7 @@ import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+from .apis.testcases import bp as tc_bp
 
 def create_app():
     load_dotenv()
@@ -30,6 +31,7 @@ def create_app():
     app.register_blueprint(tradeoff_bp, url_prefix="/api/v1/tradeoff")
     app.register_blueprint(review_bp,   url_prefix="/api/v1/review")
     app.register_blueprint(risk_bp,     url_prefix="/api/v1/risk")
+    app.register_blueprint(tc_bp,       url_prefix="/api/v1/testcases")
 
     # 👉 Register docs only when explicitly enabled and not in tests
     if os.getenv("ENABLE_DOCS", "0") == "1" and not app.config.get("TESTING"):
