@@ -157,13 +157,14 @@ def create_app():
     return app    
    
 # --- Main entry point to run the app ---
-if __name__ == '__main__':
-    app = create_app()
-    
-    # Use 'app.app_context()' to run 'db.create_all()'
-    # This ensures it has access to the app's configuration
-    with app.app_context():
-        # This will create any missing tables
-        db.create_all()
-        
-    app.run(debug=True)
+# app/main.py
+from . import create_app
+import os
+
+app = create_app()
+
+if __name__ == "__main__":
+    host = os.getenv("APP_HOST", "0.0.0.0")
+    port = int(os.getenv("APP_PORT", "8000"))
+    debug = os.getenv("APP_DEBUG", "false").lower() == "true"
+    app.run(host=host, port=port, debug=debug)
