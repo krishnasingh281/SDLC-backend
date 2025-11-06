@@ -1,17 +1,22 @@
-from flask import Blueprint, jsonify
-from spectree import Response
-from app.core.docs import api as docs
-from app.core.schemas import ReviewRequest, ReviewResponse
+import os
+from flask import Blueprint, request, jsonify
+from app.core.schemas import ReviewRequest
 from app.core.llm import run_review
 
 bp = Blueprint("review", __name__)
 
+USE_DOCS = os.getenv("ENABLE_DOCS", "0") == "1"
+if USE_DOCS:
+    from app.core.docs import api as docs
+
 @bp.post("/")
-@docs.validate(
-    json=ReviewRequest,
-    resp=Response(HTTP_200=ReviewResponse),
-    tags=["Review"]
-)
-def handle_review(json: ReviewRequest):
-    resp = run_review(json)
+def handle_review():
+    body = ReviewRequest.model_validate_json(request.data)
+    resp = run_review(body)
     return jsonify(resp.model_dump()), 200
+
+if USE_DOCS:
+    handle_review = docs.validate(
+        json=ReviewRequest,
+        tags=["Review"]
+    )(handle_review)
