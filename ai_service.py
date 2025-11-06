@@ -87,3 +87,63 @@ def perform_tradeoff_analysis(option1, option2, criteria):
         # back to app.py, which will return a 500 error.
         raise e
 
+def perform_design_review(document_text):
+    """
+    Calls the Gemini API to perform a design review for PS-02.
+    
+    Args:
+        document_text (str): The full text of the design document to be reviewed.
+
+    Returns:
+        str: The AI-generated review in Markdown format.
+    """
+    
+    # 1. Define the System Prompt for PS-02
+    # This prompt is custom-built for your PDF's requirements
+    system_prompt = """
+    You are a meticulous Senior Systems Engineer and a subject matter expert 
+    conducting a Preliminary Design Review (PDR). 
+    Your task is to analyze the provided design document.
+
+    Your response MUST be in Markdown and follow this exact structure:
+
+    1.  **Executive Summary**: A single, concise paragraph summarizing the design's purpose and key components.
+    2.  **Compliance & Requirements Check**: A bulleted list identifying how the design meets (or fails to meet) its implied requirements.
+    3.  **Potential Gaps & Risks**: A critical, bulleted list identifying potential design flaws, gaps, unaddressed edge cases, or risks.
+    4.  **Action Item Checklist**: A checklist (using `- [ ]`) of actionable items or questions that need to be addressed before the next review (e.g., CDR).
+    """
+    
+    # 2. Initialize the model WITH the system prompt
+    model = genai.GenerativeModel(
+        model_name='gemini-2.5-flash-preview-09-2025',
+        system_instruction={"parts": [{"text": system_prompt}]}
+    )
+    
+    # 3. Define the user's query
+    user_query = f"""
+    Please perform a PDR review on the following design document:
+
+    ---
+    {document_text}
+    ---
+    """
+    
+    print("---------------------------------")
+    print(f"Calling Gemini API for design review (PS-02)...")
+    
+    try:
+        # 4. Call the API
+        response = model.generate_content(
+            contents=[{"parts": [{"text": user_query}]}]
+        )
+        
+        text_response = response.candidates[0].content.parts[0].text
+        print("Gemini API call successful.")
+        print("---------------------------------")
+        return text_response
+        
+    except Exception as e:
+        print(f"Error calling Gemini API: {e}")
+        if hasattr(e, 'response'):
+            print(f"API Error details: {e.response.text}")
+        raise e
