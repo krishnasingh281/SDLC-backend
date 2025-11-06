@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from .core.docs import api as docs
+from .apis.risk import bp as risk_bp
 
 def create_app():
     load_dotenv()
@@ -11,6 +12,9 @@ def create_app():
     CORS(app)
 
     API_KEY = os.getenv("API_KEY", "")
+    for r in app.url_map.iter_rules():
+        print(r)
+
 
     @app.before_request
     def _auth():
@@ -27,6 +31,8 @@ def create_app():
     from .apis.review import bp as review_bp
     app.register_blueprint(tradeoff_bp, url_prefix="/api/v1/tradeoff")
     app.register_blueprint(review_bp,   url_prefix="/api/v1/review")
+    app.register_blueprint(risk_bp, url_prefix="/api/v1/risk")
+
 
     docs.register(app)  
 

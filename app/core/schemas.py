@@ -1,11 +1,13 @@
+# app/core/schemas.py
 from pydantic import BaseModel
 from typing import List, Literal, Optional, Dict
 
+# ===== Tradeoff =====
 class TradeoffRow(BaseModel):
     criterion: str
     option_a: str
     option_b: str
-    verdict: Literal["A","B","Tie","Insufficient Data"]
+    verdict: Literal["A", "B", "Tie", "Insufficient Data"]
     notes: str = ""
 
 class TradeoffRequest(BaseModel):
@@ -25,6 +27,7 @@ class TradeoffResponse(BaseModel):
     summary: str
     recommendation: Dict[str, str]
 
+# ===== Review =====
 class ReviewRequest(BaseModel):
     document: str
     quality_goals: List[str]
@@ -44,3 +47,27 @@ class ReviewResponse(BaseModel):
     action_items: List[str]
     trace_id: str
     generated_at: str
+
+# ===== Risk =====
+class RiskRow(BaseModel):
+    risk_id: str
+    category: str
+    description: str
+    likelihood: int  # 1..3
+    impact: int      # 1..4
+    score: int       # likelihood * impact
+    mitigation: str
+    owner: str = "Unassigned"
+    due_by: Optional[str] = None
+
+class RiskRequest(BaseModel):
+    design: str
+    non_functionals: List[str] = []
+    constraints: List[str] = []
+
+class RiskResponse(BaseModel):
+    version: str = "1.0"
+    trace_id: str
+    generated_at: str
+    summary: str
+    risks: List[RiskRow]
