@@ -31,9 +31,11 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
+      
       - name: Run tests
         env:
           API_KEY: "supersecret123"
+          ENABLE_DOCS: "0"      # 👈 disable Swagger in CI
           PYTEST_ADDOPTS: "-q"
         run: |
           python -m pytest
