@@ -43,8 +43,8 @@ class RiskItem(BaseModel):
 class ReviewResponse(BaseModel):
     version: str = "1.0"
     summary: str
-    risks: List[RiskItem]
-    action_items: List[str]
+    risks: List[RiskItem] = []
+    action_items: List[str] = []
     trace_id: str
     generated_at: str
 
@@ -71,3 +71,32 @@ class RiskResponse(BaseModel):
     generated_at: str
     summary: str
     risks: List[RiskRow]
+
+
+# ===== Test Cases =====
+from typing import Any
+
+class TestCase(BaseModel):
+    id: str
+    title: str
+    given: str
+    when: str
+    then: str
+    priority: Literal["Low", "Medium", "High"] = "Medium"
+    type: Literal["Positive", "Negative", "Edge"] = "Positive"
+    data: Dict[str, Any] = {}
+
+class TestCaseRequest(BaseModel):
+    # accept either a user story or a function signature
+    user_story: Optional[str] = None
+    function_signature: Optional[str] = None
+    non_functionals: List[str] = []           # e.g., ["Performance","Security"]
+    constraints: List[str] = []               # e.g., ["2-week deadline"]
+    count: int = 6                             # desired number of cases
+
+class TestCaseResponse(BaseModel):
+    version: str = "1.0"
+    trace_id: str
+    generated_at: str
+    summary: str
+    cases: List[TestCase]
