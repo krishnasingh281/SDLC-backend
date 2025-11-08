@@ -66,8 +66,10 @@ def run_tradeoff(req: TradeoffRequest) -> TradeoffResponse:
 
     system = (
         "You are a senior software architect. "
-        "Perform a design trade-off analysis and return VALID JSON "
-        f"that exactly matches this schema: {schema_hint}"
+        "Perform a clear, concise design trade-off analysis. "
+        "Highlight only the most critical benefits, drawbacks, and recommendations "
+        "without repeating information or giving lengthy explanations. "
+        f"Return VALID JSON strictly matching this schema: {schema_hint}"
     )
 
     user = req.model_dump_json()
@@ -95,16 +97,13 @@ def run_review(req: ReviewRequest) -> ReviewResponse:
     raw = _gemini([system, user])
     data = json.loads(_extract_json(raw))
 
-    # Fallbacks to keep Pydantic happy
-    if not isinstance(data.get("risks"), list):
-        data["risks"] = []
-    if not isinstance(data.get("action_items"), list):
-        data["action_items"] = []
+    # Ensure structure validity
+    data["risks"] = data.get("risks", []) or []
+    data["action_items"] = data.get("action_items", []) or []
 
     data["trace_id"] = trace_id
     data["generated_at"] = _now()
     return ReviewResponse(**data)
-
 
 
 @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
@@ -113,9 +112,11 @@ def run_risk(req: RiskRequest) -> RiskResponse:
     schema_hint = RiskResponse.model_json_schema()
 
     system = (
-        "You are a risk management expert. Identify and quantify system risks. "
-        "Return VALID JSON strictly following this schema: "
-        f"{schema_hint}. Include numerical likelihood and impact values (1–5)."
+        "You are a risk management expert. "
+        "Identify only the most significant risks (up to 3–5). "
+        "Keep descriptions short, precise, and avoid redundancy. "
+        "Quantify likelihood and impact between 1–5, and compute a severity score. "
+        f"Return VALID JSON strictly following this schema: {schema_hint}"
     )
 
     user = req.model_dump_json()
@@ -137,8 +138,11 @@ def run_testcases(req: TestCaseRequest) -> TestCaseResponse:
     schema_hint = TestCaseResponse.model_json_schema()
 
     system = (
-        "You are a senior QA engineer. Generate BDD-style test cases (Given/When/Then). "
-        f"Return VALID JSON that exactly matches this schema: {schema_hint}"
+        "You are a senior QA engineer. "
+        "Generate concise, BDD-style test cases (Given/When/Then). "
+        "Focus on key functional scenarios only (limit to 3–5). "
+        "Avoid verbose descriptions or trivial cases. "
+        f"Return VALID JSON strictly matching this schema: {schema_hint}"
     )
 
     user = req.model_dump_json()
