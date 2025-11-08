@@ -43,8 +43,8 @@ class RiskItem(BaseModel):
 class ReviewResponse(BaseModel):
     version: str = "1.0"
     summary: str
-    risks: List[RiskItem]
-    action_items: List[str]
+    risks: List[RiskItem] = []
+    action_items: List[str] = []
     trace_id: str
     generated_at: str
 
