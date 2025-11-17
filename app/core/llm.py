@@ -14,7 +14,9 @@ from app.core.schemas import (
     DesignSuggestRequest, DesignSuggestResponse, DesignOption, # <-- Added missing Design imports here
     TechStackRequest, TechStackResponse, TechSuggestion, 
     PerfFinding, ReferenceComparison, ComplianceRequest, ComplianceResponse,
-    GenerationRequest, GenerationResponse
+    GenerationRequest, GenerationResponse,
+    DebugRequest, DebugResponse, IssueFinding
+
 )
 from typing import List, Dict, Any, Optional, Union # Ensuring all types are imported
 
@@ -326,3 +328,35 @@ def run_code_generation(req: GenerationRequest) -> GenerationResponse:
     data.setdefault("libraries_suggested", [])
 
     return GenerationResponse(**data)
+
+
+# ==========================
+# Core API Logic - PS-09: Debug Assistant
+# ==========================
+
+@retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
+def run_debug_assistant(req: DebugRequest) -> DebugResponse:
+    trace_id = str(uuid.uuid4())
+    schema_hint = DebugResponse.model_json_schema()
+
+    system = (
+        "You are a Senior Debugging and Optimization Engineer. Your task is to perform root cause analysis on the provided failing code and traceback. "
+        "Strictly adhere to the following rules: "
+        "1. Identify the primary root cause first in the `root_cause_summary` (max 2 sentences)."
+        "2. Provide only the 1-3 most critical findings."
+        "3. Provide the `suggested_fix` as clear, corrected code, ready to drop in (do not use markdown formatting like ```)."
+        "4. Identify any related performance optimizations."
+        f"Return VALID JSON strictly matching this schema: {schema_hint}"
+    )
+
+    user = req.model_dump_json()
+    raw = _gemini([system, user])
+    data = json.loads(_extract_json(raw))
+
+    # Ensure fallback correctness
+    data["trace_id"] = trace_id
+    data["generated_at"] = _now()
+    data.setdefault("findings", [])
+    data.setdefault("optimization_notes", [])
+
+    return DebugResponse(**data)

@@ -61,6 +61,7 @@ def create_app():
     from .apis.techstack import bp as techstack_bp
     from .apis.compliance import bp as compliance_bp 
     from .apis.codegen import bp as codegen_bp
+    from .apis.debug import bp as debug_bp
 
 
     app.register_blueprint(tradeoff_bp, url_prefix="/api/v1/tradeoff")
@@ -72,6 +73,7 @@ def create_app():
     app.register_blueprint(techstack_bp, url_prefix="/api/v1/techstack")    
     app.register_blueprint(compliance_bp, url_prefix="/api/v1/compliance")
     app.register_blueprint(codegen_bp, url_prefix="/api/v1/codegen")
+    app.register_blueprint(debug_bp, url_prefix="/api/v1/debug")
 
 
     # --- Optional API docs (Spectree) ---

@@ -205,3 +205,29 @@ class GenerationResponse(BaseModel):
     generated_code: str = Field(..., description="The fully generated code snippet or boilerplate.")
     explanation: str = Field(..., description="A brief explanation of the code and the libraries used.")
     libraries_suggested: List[str] = Field(default_factory=list, description="List of specific libraries or packages that were used/suggested.")
+
+
+# ==============================================================================
+# PS-09: Streamlining Debugging / Debug Assistant
+# ==============================================================================
+
+class IssueFinding(BaseModel):
+    category: Literal["Bug", "Bottleneck", "Logic Error", "Security Flaw"]
+    location: str = Field(..., description="The filename:line_number or function name where the issue is centered.")
+    description: str = Field(..., description="Detailed explanation of the problem detected.")
+    
+class DebugRequest(BaseModel):
+    failing_code: str = Field(..., description="The code snippet or function causing the issue.")
+    traceback: Optional[str] = Field(None, description="The full traceback, error message, or log snippet associated with the failure.")
+    expected_behavior: str = Field(..., description="What the code was supposed to do.")
+    language: str = Field("Python", description="The programming language of the code.")
+
+class DebugResponse(BaseModel):
+    version: str = "1.0"
+    trace_id: str
+    generated_at: str
+    
+    root_cause_summary: str = Field(..., description="A concise summary of the primary cause of the failure or bottleneck.")
+    findings: List[IssueFinding] = Field(default_factory=list, description="List of 1-3 critical issues identified.")
+    suggested_fix: str = Field(..., description="The corrected, ready-to-use code snippet or a clear description of the required fix.")
+    optimization_notes: List[str] = Field(default_factory=list, description="Notes on potential performance optimizations found during analysis (max 3 points).")
