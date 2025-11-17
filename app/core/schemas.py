@@ -100,3 +100,67 @@ class TestCaseResponse(BaseModel):
     generated_at: str
     summary: str
     cases: List[TestCase]
+
+# --- PS-04: Suggest Design ---
+
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
+class DesignSuggestRequest(BaseModel):
+    problem: str = Field(..., description="Short description of the problem/domain")
+    quality_goals: List[str] = Field(default_factory=list, description="e.g., Scalability, Reliability")
+    constraints: List[str] = Field(default_factory=list, description="e.g., team of 3, no Kafka, budget cap")
+    preferred_stack: Optional[List[str]] = Field(default=None, description="Optional tech preferences")
+
+class DesignOption(BaseModel):
+    name: str
+    when_to_use: str
+    key_components: List[str] = Field(default_factory=list)
+    pros: List[str] = Field(default_factory=list)
+    cons: List[str] = Field(default_factory=list)
+    diagram_mermaid: Optional[str] = Field(
+        default=None,
+        description="Small mermaid snippet, e.g., graph LR; A-->B"
+    )
+
+class DesignSuggestResponse(BaseModel):
+    version: str = "1.0"
+    trace_id: str
+    generated_at: str
+    summary: str
+    options: List[DesignOption] = Field(default_factory=list)
+    recommendation: str = Field(..., description="One-paragraph final pick + why")
+
+
+# --- PS-05: Design Performance & Tech Stack Recommendation ---
+
+class TechSuggestion(BaseModel):
+    category: str  # e.g., "Backend Framework", "Database", "Caching", "Observability"
+    options: List[str]  # e.g., ["Django", "FastAPI"]
+    reasoning: str      # why these choices
+
+class PerfFinding(BaseModel):
+    attribute: str      # e.g., Reliability, Latency, Scalability
+    score: int          # 1–10 rating
+    issues: List[str]
+    suggestions: List[str]
+
+class ReferenceComparison(BaseModel):
+    matched: List[str]
+    missing: List[str]
+    improvements: List[str]
+
+class TechStackRequest(BaseModel):
+    architecture: str = Field(..., description="User-provided architecture description")
+    quality_goals: List[str] = Field(default_factory=list, description="e.g., Reliability, Performance")
+    domain: Optional[str] = Field(default=None, description="e.g., e-commerce, chat app, banking")
+
+class TechStackResponse(BaseModel):
+    version: str = "1.0"
+    trace_id: str
+    generated_at: str
+
+    summary: str
+    performance_review: List[PerfFinding]
+    tech_recommendations: List[TechSuggestion]
+    reference_comparison: ReferenceComparison

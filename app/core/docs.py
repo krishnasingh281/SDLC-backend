@@ -1,12 +1,16 @@
 # app/core/docs.py
-from spectree import SpecTree
 
-# pass backend as positional arg, and use lowercase kw names
+from spectree import SpecTree
+from spectree.plugins.flask_plugin import FlaskPlugin
+
+# Toggle to enable/disable docs decorators
+USE_DOCS = True
+
 api = SpecTree(
-    "flask",
+    backend=FlaskPlugin,          # ⬅️ pass the backend class, NOT "flask"
+    mode="strict",                # validate both request & response
+    path="/apidocs",              # base path for API docs
     title="Intelligent SDLC Assistant",
-    version="0.1.0",
-    path="/apidocs",     # UI will be at /apidocs
-    mode="strict",       # request/response validation
-    ui="swagger"         # swagger | redoc | rapidoc
+    version="1.0.0",
+    # NOTE: don't pass ui / UI here; newer Spectree config throws on it
 )
