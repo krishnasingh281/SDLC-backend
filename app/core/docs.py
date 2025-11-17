@@ -1,18 +1,19 @@
 from spectree import SpecTree
-from pydantic import BaseModel # CRITICAL: Import BaseModel here
+from pydantic import BaseModel # CRITICAL: BaseModel is still needed for the next step
 
 # Check environment variable to decide whether to enable docs/validation
-USE_DOCS = True # Set to False if you don't want validation/docs
+USE_DOCS = True # Keep this as is
 
-# Initialize SpecTree, passing the BaseModel reference explicitly
-# This prevents the conflict when spectree tries to load its own reference.
+# Initialize SpecTree
 api = SpecTree(
     'flask',
-    MODEL_TITLE='SDLC Assistant API',
-    MODEL_DESCRIPTION='AI-powered tools for Design, Risk, and Development tasks.',
+    # --- CRITICAL FIX: Rename arguments to lowercase (snake_case) ---
+    model_title='SDLC Assistant API', 
+    model_description='AI-powered tools for Design, Risk, and Development tasks.',
     version='v1.0.0',
-    # CRITICAL FIX: Pass Pydantic's BaseModel reference directly
-    PydanticModel=BaseModel 
+    # The BaseModel fix from before, renamed to pydantic_model
+    pydantic_model=BaseModel 
+    # -------------------------------------------------------------------
 )
 
 # This initialization function is often used in the Flask setup
