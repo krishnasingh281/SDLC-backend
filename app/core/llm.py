@@ -13,7 +13,8 @@ from app.core.schemas import (
     TestCaseRequest, TestCaseResponse, TestCase,
     DesignSuggestRequest, DesignSuggestResponse, DesignOption, # <-- Added missing Design imports here
     TechStackRequest, TechStackResponse, TechSuggestion, 
-    PerfFinding, ReferenceComparison, ComplianceRequest, ComplianceResponse
+    PerfFinding, ReferenceComparison, ComplianceRequest, ComplianceResponse,
+    GenerationRequest, GenerationResponse
 )
 from typing import List, Dict, Any, Optional, Union # Ensuring all types are imported
 
@@ -295,3 +296,33 @@ def run_compliance_check(req: ComplianceRequest) -> ComplianceResponse:
 
     return ComplianceResponse(**data)
 
+
+
+# ==========================
+# Core API Logic - PS-08: Code Generation & Efficiency
+# ==========================
+
+@retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
+def run_code_generation(req: GenerationRequest) -> GenerationResponse:
+    trace_id = str(uuid.uuid4())
+    schema_hint = GenerationResponse.model_json_schema()
+
+    system = (
+        "You are an intelligent code generation assistant. Your task is to generate the highest quality, functional, and complete code snippet based on the user's prompt. "
+        "Strictly adhere to the following rules: "
+        "1. Do not use markdown (e.g., ```python) in the `generated_code` field, only the plain code text."
+        "2. Keep the `explanation` concise (max 3 sentences). "
+        "3. Provide only the necessary libraries in the list. "
+        f"Return VALID JSON strictly matching this schema: {schema_hint}"
+    )
+
+    user = req.model_dump_json()
+    raw = _gemini([system, user])
+    data = json.loads(_extract_json(raw))
+
+    # Ensure fallback correctness
+    data["trace_id"] = trace_id
+    data["generated_at"] = _now()
+    data.setdefault("libraries_suggested", [])
+
+    return GenerationResponse(**data)

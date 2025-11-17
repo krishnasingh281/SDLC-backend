@@ -190,4 +190,18 @@ class ComplianceResponse(BaseModel):
     summary: str = Field(..., description="A one-paragraph summary of the compliance status and biggest risks.")
     findings: List[Finding] = Field(default_factory=list, description="List of specific issues found in the code.")
 
+
+class GenerationRequest(BaseModel):
+    prompt: str = Field(..., description="The user story, function signature, or high-level description of the code required.")
+    language: str = Field("Python", description="The desired programming language for the output code.")
+    context_code: Optional[str] = Field(None, description="Existing code context in the file to help the AI complete the function.")
+    framework: Optional[str] = Field(None, description="Specific framework or library to use (e.g., FastAPI, Pandas).")
+
+class GenerationResponse(BaseModel):
+    version: str = "1.0"
+    trace_id: str
+    generated_at: str
     
+    generated_code: str = Field(..., description="The fully generated code snippet or boilerplate.")
+    explanation: str = Field(..., description="A brief explanation of the code and the libraries used.")
+    libraries_suggested: List[str] = Field(default_factory=list, description="List of specific libraries or packages that were used/suggested.")
