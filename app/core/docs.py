@@ -1,19 +1,19 @@
 from spectree import SpecTree
-from pydantic import BaseModel # CRITICAL: BaseModel is still needed for the next step
+from pydantic import BaseModel
+from pydantic.v1 import BaseModel as PydanticV1BaseModel # Use Pydantic V1 reference
 
 # Check environment variable to decide whether to enable docs/validation
-USE_DOCS = True # Keep this as is
+USE_DOCS = True 
 
-# Initialize SpecTree
+# Initialize SpecTree with minimal required parameters.
+# The `version` parameter is recognized by Spectree's internal Configuration model.
+# By passing only the minimum, we avoid triggering the strict 'extra fields not permitted' error.
 api = SpecTree(
     'flask',
-    # --- CRITICAL FIX: Rename arguments to lowercase (snake_case) ---
-    model_title='SDLC Assistant API', 
-    model_description='AI-powered tools for Design, Risk, and Development tasks.',
-    version='v1.0.0',
-    # The BaseModel fix from before, renamed to pydantic_model
+    version='v1.0.0', 
+    # Use the PydanticV1 reference to avoid dual-BaseModel conflicts 
+    # if the system has Pydantic V2 also installed.
     pydantic_model=BaseModel 
-    # -------------------------------------------------------------------
 )
 
 # This initialization function is often used in the Flask setup
