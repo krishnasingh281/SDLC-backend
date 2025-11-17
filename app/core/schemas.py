@@ -164,3 +164,28 @@ class TechStackResponse(BaseModel):
     performance_review: List[PerfFinding]
     tech_recommendations: List[TechSuggestion]
     reference_comparison: ReferenceComparison
+
+
+# ==============================================================================
+# PS-07: Code Compliance & Standards Check
+# ==============================================================================
+
+class Finding(BaseModel):
+    line: Optional[int] = Field(None, description="The line number where the issue was found.")
+    type: Literal["SECURITY_ERROR", "DESIGN_WARNING", "STYLE_VIOLATION"]
+    message: str = Field(..., description="Concise description of the violation or suggestion.")
+    severity: Literal["Critical", "High", "Medium", "Low"]
+
+class ComplianceRequest(BaseModel):
+    code_snippet: str = Field(..., description="The code snippet to analyze (e.g., Python function or block).")
+    language: str = Field("Python", description="The programming language of the snippet (e.g., Python, JavaScript).")
+    standard_context: Optional[str] = Field(None, description="Specific standards or rules to check against (e.g., 'Use PEP8', 'Avoid global state').")
+
+class ComplianceResponse(BaseModel):
+    version: str = "1.0"
+    trace_id: str
+    generated_at: str
+    
+    overall_score: int = Field(..., description="Overall compliance score out of 100.")
+    summary: str = Field(..., description="A one-paragraph summary of the compliance status and biggest risks.")
+    findings: List[Finding] = Field(default_factory=list, description="List of specific issues found in the code.")

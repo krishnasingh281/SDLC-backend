@@ -59,6 +59,7 @@ def create_app():
     from .apis.admin import bp as admin_bp
     from .apis.design import bp as design_bp 
     from .apis.techstack import bp as techstack_bp
+    from .apis.compliance import bp as compliance_bp 
 
 
     app.register_blueprint(tradeoff_bp, url_prefix="/api/v1/tradeoff")
@@ -67,7 +68,8 @@ def create_app():
     app.register_blueprint(tc_bp,       url_prefix="/api/v1/testcases")
     app.register_blueprint(admin_bp,    url_prefix="/api/v1/admin")
     app.register_blueprint(design_bp,   url_prefix="/api/v1/design")
-    app.register_blueprint(techstack_bp, url_prefix="/api/v1/techstack")
+    app.register_blueprint(techstack_bp, url_prefix="/api/v1/techstack")    
+    app.register_blueprint(compliance_bp, url_prefix="/api/v1/compliance")
 
 
     # --- Optional API docs (Spectree) ---

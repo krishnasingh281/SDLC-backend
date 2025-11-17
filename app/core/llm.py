@@ -13,7 +13,7 @@ from app.core.schemas import (
     TestCaseRequest, TestCaseResponse, TestCase,
     DesignSuggestRequest, DesignSuggestResponse, DesignOption, # <-- Added missing Design imports here
     TechStackRequest, TechStackResponse, TechSuggestion, 
-    PerfFinding, ReferenceComparison
+    PerfFinding, ReferenceComparison, ComplianceRequest, ComplianceResponse
 )
 from typing import List, Dict, Any, Optional, Union # Ensuring all types are imported
 
@@ -265,3 +265,32 @@ def run_techstack(req: TechStackRequest) -> TechStackResponse:
     data.setdefault("reference_comparison", {"matched": [], "missing": [], "improvements": []})
 
     return TechStackResponse(**data)
+
+# ==========================
+# Core API Logic - PS-07: Code Compliance & Standards Check
+# ==========================
+
+@retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
+def run_compliance_check(req: ComplianceRequest) -> ComplianceResponse:
+    trace_id = str(uuid.uuid4())
+    schema_hint = ComplianceResponse.model_json_schema()
+
+    system = (
+        "You are an expert static code analysis tool and security auditor. "
+        "Analyze the provided code snippet for adherence to best practices, coding standards (e.g., PEP8, style), and security flaws. "
+        "Identify 3-5 of the most critical findings. "
+        "Calculate an overall score out of 100 based on the severity of the findings (lower score means worse code). "
+        f"Return VALID JSON strictly matching this schema: {schema_hint}"
+    )
+
+    user = req.model_dump_json()
+    raw = _gemini([system, user])
+    data = json.loads(_extract_json(raw))
+
+    # Ensure fallback correctness
+    data["trace_id"] = trace_id
+    data["generated_at"] = _now()
+    data.setdefault("findings", [])
+    data.setdefault("overall_score", 0)
+
+    return ComplianceResponse(**data)
