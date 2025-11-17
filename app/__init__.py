@@ -57,12 +57,18 @@ def create_app():
     from .apis.risk import bp as risk_bp
     from .apis.testcases import bp as tc_bp
     from .apis.admin import bp as admin_bp
+    from .apis.design import bp as design_bp 
+    from .apis.techstack import bp as techstack_bp
+
 
     app.register_blueprint(tradeoff_bp, url_prefix="/api/v1/tradeoff")
     app.register_blueprint(review_bp,   url_prefix="/api/v1/review")
     app.register_blueprint(risk_bp,     url_prefix="/api/v1/risk")
     app.register_blueprint(tc_bp,       url_prefix="/api/v1/testcases")
     app.register_blueprint(admin_bp,    url_prefix="/api/v1/admin")
+    app.register_blueprint(design_bp,   url_prefix="/api/v1/design")
+    app.register_blueprint(techstack_bp, url_prefix="/api/v1/techstack")
+
 
     # --- Optional API docs (Spectree) ---
     if os.getenv("ENABLE_DOCS", "0") == "1" and not app.config.get("TESTING"):

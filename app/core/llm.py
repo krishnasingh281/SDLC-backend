@@ -5,12 +5,16 @@ import datetime as dt
 from tenacity import retry, stop_after_attempt, wait_exponential
 import google.generativeai as genai
 
+
 from app.core.schemas import (
     TradeoffRequest, TradeoffResponse,
     ReviewRequest, ReviewResponse,
     RiskRequest, RiskResponse,
-    TestCaseRequest, TestCaseResponse
+    TestCaseRequest, TestCaseResponse,
+    TechStackRequest, TechStackResponse,
+    PerfFinding, TechSuggestion, ReferenceComparison
 )
+
 
 # --- Configure Gemini ---
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -156,3 +160,80 @@ def run_testcases(req: TestCaseRequest) -> TestCaseResponse:
     data["trace_id"] = trace_id
     data["generated_at"] = _now()
     return TestCaseResponse(**data)
+
+
+# --- PS-04: Suggest Design ---
+
+from app.core.schemas import DesignSuggestRequest, DesignSuggestResponse  # add to the top import list as well
+
+@retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
+def run_design_suggest(req: DesignSuggestRequest) -> DesignSuggestResponse:
+    trace_id = str(uuid.uuid4())
+    schema_hint = DesignSuggestResponse.model_json_schema()
+
+    system = (
+    "You are a pragmatic software architect. Propose 2–3 concise design options.\n"
+    "Rules:\n"
+    "• VALID JSON ONLY matching the schema exactly.\n"
+    "• Keep each option tight: when_to_use (1 line), 3–5 key_components, pros/cons max 3 each.\n"
+    "• Use a tiny mermaid snippet or null for diagram_mermaid.\n"
+    "• Keep the summary to 1–2 lines.\n"
+    "• End with a single-paragraph recommendation.\n"
+    "• If all options are cloud-specific, include at least one cloud-agnostic alternative (Docker+Postgres+Redis, etc.).\n"
+    f"\nSchema: {schema_hint}"
+)
+
+
+    user = req.model_dump_json()
+    raw = _gemini([system, user])
+    data = json.loads(_extract_json(raw))
+
+    # Harden output so Pydantic never explodes
+    # Cap list lengths so outputs stay crisp
+    for opt in data.get("options", []) or []:
+        if isinstance(opt.get("key_components"), list):
+            opt["key_components"] = opt["key_components"][:5]
+        if isinstance(opt.get("pros"), list):
+            opt["pros"] = opt["pros"][:3]
+        if isinstance(opt.get("cons"), list):
+            opt["cons"] = opt["cons"][:3]
+
+
+    data["trace_id"] = trace_id
+    data["generated_at"] = _now()
+    data.setdefault("version", "1.0")
+    data.setdefault("summary", "")
+    data.setdefault("recommendation", "")
+
+    return DesignSuggestResponse(**data)
+
+
+@retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
+def run_techstack(req: TechStackRequest) -> TechStackResponse:
+    trace_id = str(uuid.uuid4())
+    schema_hint = TechStackResponse.model_json_schema()
+
+    system = (
+        "You are a senior software architect. "
+        "Evaluate the given architecture against quality attributes. "
+        "Rate performance issues (1-10) with crisp bullet points. "
+        "Recommend specific tech stacks (frameworks, databases, messaging, DevOps). "
+        "Compare the architecture with a generic reference architecture for the domain "
+        "and highlight missing components. "
+        f"Return VALID JSON strictly matching this schema: {schema_hint}"
+    )
+
+    user = req.model_dump_json()
+    raw = _gemini([system, user])
+    data = json.loads(_extract_json(raw))
+
+    # Ensure fallback correctness
+    data["trace_id"] = trace_id
+    data["generated_at"] = _now()
+
+    # Fix nested defaults if LLM messes up
+    data.setdefault("performance_review", [])
+    data.setdefault("tech_recommendations", [])
+    data.setdefault("reference_comparison", {"matched": [], "missing": [], "improvements": []})
+
+    return TechStackResponse(**data)
