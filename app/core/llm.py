@@ -294,3 +294,4 @@ def run_compliance_check(req: ComplianceRequest) -> ComplianceResponse:
     data.setdefault("overall_score", 0)
 
     return ComplianceResponse(**data)
+

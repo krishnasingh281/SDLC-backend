@@ -189,3 +189,5 @@ class ComplianceResponse(BaseModel):
     overall_score: int = Field(..., description="Overall compliance score out of 100.")
     summary: str = Field(..., description="A one-paragraph summary of the compliance status and biggest risks.")
     findings: List[Finding] = Field(default_factory=list, description="List of specific issues found in the code.")
+
+    

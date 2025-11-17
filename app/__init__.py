@@ -70,6 +70,7 @@ def create_app():
     app.register_blueprint(design_bp,   url_prefix="/api/v1/design")
     app.register_blueprint(techstack_bp, url_prefix="/api/v1/techstack")    
     app.register_blueprint(compliance_bp, url_prefix="/api/v1/compliance")
+    
 
 
     # --- Optional API docs (Spectree) ---
