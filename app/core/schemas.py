@@ -140,8 +140,8 @@ class TechSuggestion(BaseModel):
     reasoning: str      # why these choices
 
 class PerfFinding(BaseModel):
-    attribute: str      # e.g., Reliability, Latency, Scalability
-    score: int          # 1–10 rating
+    attribute: str       # e.g., Reliability, Latency, Scalability
+    score: int           # 1–10 rating
     issues: List[str]
     suggestions: List[str]
 

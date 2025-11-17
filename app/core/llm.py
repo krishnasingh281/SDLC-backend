@@ -7,16 +7,18 @@ import google.generativeai as genai
 
 
 from app.core.schemas import (
-    TradeoffRequest, TradeoffResponse,
-    ReviewRequest, ReviewResponse,
-    RiskRequest, RiskResponse,
-    TestCaseRequest, TestCaseResponse,
-    TechStackRequest, TechStackResponse,
-    PerfFinding, TechSuggestion, ReferenceComparison
+    TradeoffRequest, TradeoffResponse, TradeoffRow,
+    ReviewRequest, ReviewResponse, RiskItem,
+    RiskRequest, RiskResponse, RiskRow,
+    TestCaseRequest, TestCaseResponse, TestCase,
+    DesignSuggestRequest, DesignSuggestResponse, DesignOption, # <-- Added missing Design imports here
+    TechStackRequest, TechStackResponse, TechSuggestion, 
+    PerfFinding, ReferenceComparison
 )
-
+from typing import List, Dict, Any, Optional, Union # Ensuring all types are imported
 
 # --- Configure Gemini ---
+# NOTE: Ensure GOOGLE_API_KEY environment variable is set
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 MODEL_NAME = "gemini-2.5-flash"
 
@@ -60,7 +62,7 @@ def _gemini(messages: list[str]) -> str:
 
 
 # ==========================
-# Core API Logic
+# Core API Logic - PS-01: Trade-off Analysis
 # ==========================
 
 @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
@@ -77,12 +79,22 @@ def run_tradeoff(req: TradeoffRequest) -> TradeoffResponse:
     )
 
     user = req.model_dump_json()
-    data = json.loads(_extract_json(_gemini([system, user])))
+    raw = _gemini([system, user]) # Use the raw output from _gemini
+    data = json.loads(_extract_json(raw))
 
+    # Pydantic will validate structure, but we ensure essential fields are set
     data["trace_id"] = trace_id
     data["generated_at"] = _now()
+    
+    # Ensure nested objects are lists if the LLM was sparse
+    data["matrix"] = data.get("matrix", []) or []
+
     return TradeoffResponse(**data)
 
+
+# ==========================
+# Core API Logic - PS-02: Design Review
+# ==========================
 
 @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
 def run_review(req: ReviewRequest) -> ReviewResponse:
@@ -110,6 +122,10 @@ def run_review(req: ReviewRequest) -> ReviewResponse:
     return ReviewResponse(**data)
 
 
+# ==========================
+# Core API Logic - PS-03: Design Risk Analysis
+# ==========================
+
 @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
 def run_risk(req: RiskRequest) -> RiskResponse:
     trace_id = str(uuid.uuid4())
@@ -119,15 +135,20 @@ def run_risk(req: RiskRequest) -> RiskResponse:
         "You are a risk management expert. "
         "Identify only the most significant risks (up to 3–5). "
         "Keep descriptions short, precise, and avoid redundancy. "
-        "Quantify likelihood and impact between 1–5, and compute a severity score. "
+        "Quantify likelihood (1-3) and impact (1-4). "
+        "Compute score as likelihood * impact. "
         f"Return VALID JSON strictly following this schema: {schema_hint}"
     )
 
     user = req.model_dump_json()
-    data = json.loads(_extract_json(_gemini([system, user])))
+    raw = _gemini([system, user])
+    data = json.loads(_extract_json(raw))
 
+    # Calculate score and assign IDs, then sort
     for r in data.get("risks", []):
-        r["score"] = int(r.get("likelihood", 1)) * int(r.get("impact", 1))
+        likelihood = int(r.get("likelihood", 1))
+        impact = int(r.get("impact", 1))
+        r["score"] = likelihood * impact
         r.setdefault("risk_id", f"R-{uuid.uuid4().hex[:6]}")
     data["risks"] = sorted(data.get("risks", []), key=lambda x: x["score"], reverse=True)
 
@@ -135,6 +156,10 @@ def run_risk(req: RiskRequest) -> RiskResponse:
     data["generated_at"] = _now()
     return RiskResponse(**data)
 
+
+# ==========================
+# Core API Logic - PS-06: Generate Test Cases
+# ==========================
 
 @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
 def run_testcases(req: TestCaseRequest) -> TestCaseResponse:
@@ -144,13 +169,14 @@ def run_testcases(req: TestCaseRequest) -> TestCaseResponse:
     system = (
         "You are a senior QA engineer. "
         "Generate concise, BDD-style test cases (Given/When/Then). "
-        "Focus on key functional scenarios only (limit to 3–5). "
+        "Focus on key functional scenarios only (limit to the requested count, up to 10). "
         "Avoid verbose descriptions or trivial cases. "
         f"Return VALID JSON strictly matching this schema: {schema_hint}"
     )
 
     user = req.model_dump_json()
-    data = json.loads(_extract_json(_gemini([system, user])))
+    raw = _gemini([system, user])
+    data = json.loads(_extract_json(raw))
 
     for i, c in enumerate(data.get("cases", []), start=1):
         c.setdefault("id", f"TC-{i:03}")
@@ -162,9 +188,9 @@ def run_testcases(req: TestCaseRequest) -> TestCaseResponse:
     return TestCaseResponse(**data)
 
 
-# --- PS-04: Suggest Design ---
-
-from app.core.schemas import DesignSuggestRequest, DesignSuggestResponse  # add to the top import list as well
+# ==========================
+# Core API Logic - PS-04: Suggest Design
+# ==========================
 
 @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
 def run_design_suggest(req: DesignSuggestRequest) -> DesignSuggestResponse:
@@ -182,7 +208,6 @@ def run_design_suggest(req: DesignSuggestRequest) -> DesignSuggestResponse:
     "• If all options are cloud-specific, include at least one cloud-agnostic alternative (Docker+Postgres+Redis, etc.).\n"
     f"\nSchema: {schema_hint}"
 )
-
 
     user = req.model_dump_json()
     raw = _gemini([system, user])
@@ -208,6 +233,10 @@ def run_design_suggest(req: DesignSuggestRequest) -> DesignSuggestResponse:
     return DesignSuggestResponse(**data)
 
 
+# ==========================
+# Core API Logic - PS-05: Tech Stack Recommendation
+# ==========================
+
 @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=3))
 def run_techstack(req: TechStackRequest) -> TechStackResponse:
     trace_id = str(uuid.uuid4())
@@ -216,10 +245,9 @@ def run_techstack(req: TechStackRequest) -> TechStackResponse:
     system = (
         "You are a senior software architect. "
         "Evaluate the given architecture against quality attributes. "
-        "Rate performance issues (1-10) with crisp bullet points. "
+        "For performance_review, **limit issues and suggestions to 3 items each** and keep them concise (1 sentence maximum). "
         "Recommend specific tech stacks (frameworks, databases, messaging, DevOps). "
-        "Compare the architecture with a generic reference architecture for the domain "
-        "and highlight missing components. "
+        "For reference_comparison, **limit matched, missing, and improvements to 3 items each**. "
         f"Return VALID JSON strictly matching this schema: {schema_hint}"
     )
 
