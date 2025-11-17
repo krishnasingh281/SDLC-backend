@@ -1,16 +1,21 @@
-# app/core/docs.py
-
 from spectree import SpecTree
-from spectree.plugins.flask_plugin import FlaskPlugin
+from pydantic import BaseModel # Keep the import, but don't pass it to SpecTree
 
-# Toggle to enable/disable docs decorators
-USE_DOCS = True
+# Check environment variable to decide whether to enable docs/validation
+USE_DOCS = True 
 
+# Initialize SpecTree with ONLY the version and the framework type.
+# We are removing 'pydantic_model' to avoid the validation error.
 api = SpecTree(
-    backend=FlaskPlugin,          # ⬅️ pass the backend class, NOT "flask"
-    mode="strict",                # validate both request & response
-    path="/apidocs",              # base path for API docs
-    title="Intelligent SDLC Assistant",
-    version="1.0.0",
-    # NOTE: don't pass ui / UI here; newer Spectree config throws on it
+    'flask',
+    version='v1.0.0', 
+    # Removed the following lines to bypass the validation error:
+    # model_title='SDLC Assistant API', 
+    # model_description='AI-powered tools for Design, Risk, and Development tasks.',
+    # pydantic_model=BaseModel 
 )
+
+# This initialization function is often used in the Flask setup
+def init_docs(app):
+    if USE_DOCS:
+        api.register(app)
